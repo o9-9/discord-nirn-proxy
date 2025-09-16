@@ -6,6 +6,7 @@ import (
 )
 
 const knownData = "test data"
+
 // Calculated using ISO table
 const knownHash = 10232006911339297906
 
@@ -13,7 +14,7 @@ func TestHashWorks(t *testing.T) {
 	HashCRC64(knownData)
 }
 
-//Test for correctness
+// Test for correctness
 func TestHashIsConsistent(t *testing.T) {
 	ret := HashCRC64(knownData)
 	if ret != knownHash {
@@ -21,7 +22,7 @@ func TestHashIsConsistent(t *testing.T) {
 	}
 }
 
-//Test for consistency when function is used for other data
+// Test for consistency when function is used for other data
 func TestHashIsConsistentAcrossMultipleRuns(t *testing.T) {
 	for i := 0; i < 50000; i++ {
 		HashCRC64(strconv.Itoa(i))
@@ -33,3 +34,23 @@ func TestHashIsConsistentAcrossMultipleRuns(t *testing.T) {
 	}
 }
 
+func TestHasAuthPrefix(t *testing.T) {
+	tests := []struct {
+		name     string
+		token    string
+		scheme   string
+		expected bool
+	}{
+		{name: "basic with space", token: "Basic Zm9vOmJhcg==", scheme: "Basic", expected: true},
+		{name: "basic lowercase", token: "basic Zm9vOmJhcg==", scheme: "Basic", expected: true},
+		{name: "missing space", token: "BasicZm9v", scheme: "Basic", expected: false},
+		{name: "different scheme", token: "Bot foo", scheme: "Basic", expected: false},
+		{name: "bearer", token: "Bearer token", scheme: "Bearer", expected: true},
+	}
+
+	for _, tc := range tests {
+		if result := HasAuthPrefix(tc.token, tc.scheme); result != tc.expected {
+			t.Errorf("%s: expected %v, got %v", tc.name, tc.expected, result)
+		}
+	}
+}

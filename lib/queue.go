@@ -46,13 +46,14 @@ func NewRequestQueue(processor func(ctx context.Context, item *QueueItem) (*http
 	queueType := NoAuth
 	var user *BotUserResponse
 	var err error
-	if !strings.HasPrefix(token, "Bearer") {
+	switch {
+	case HasAuthPrefix(token, "Bearer"):
+		queueType = Bearer
+	case token != "" && !HasAuthPrefix(token, "Basic"):
 		user, err = GetBotUser(token)
-		if err != nil && token != "" {
+		if err != nil {
 			return nil, err
 		}
-	} else {
-		queueType = Bearer
 	}
 
 	limit, err := GetBotGlobalLimit(token, user)

@@ -34,6 +34,7 @@ func GetBotId(token string) string {
 	} else {
 		token = strings.ReplaceAll(token, "Bot ", "")
 		token = strings.ReplaceAll(token, "Bearer ", "")
+		token = strings.ReplaceAll(token, "Basic ", "")
 		token = strings.Split(token, ".")[0]
 		token, err := base64.StdEncoding.DecodeString(token)
 		if err != nil {
@@ -43,4 +44,24 @@ func GetBotId(token string) string {
 		}
 	}
 	return clientId
+}
+
+// HasAuthPrefix checks if the provided authorization header value starts with the
+// given scheme. Comparison is performed case-insensitively and requires the
+// scheme to be followed by at least one space as mandated by RFC 7235.
+func HasAuthPrefix(token, scheme string) bool {
+	if len(token) <= len(scheme) {
+		return false
+	}
+
+	if !strings.EqualFold(token[:len(scheme)], scheme) {
+		return false
+	}
+
+	switch token[len(scheme)] {
+	case ' ', '\t':
+		return true
+	default:
+		return false
+	}
 }

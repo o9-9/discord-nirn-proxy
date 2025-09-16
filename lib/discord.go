@@ -137,7 +137,11 @@ func GetBotGlobalLimit(token string, user *BotUserResponse) (uint, error) {
 		}
 	}
 
-	if strings.HasPrefix(token, "Bearer") {
+	if HasAuthPrefix(token, "Bearer") {
+		return 50, nil
+	}
+
+	if HasAuthPrefix(token, "Basic") {
 		return 50, nil
 	}
 

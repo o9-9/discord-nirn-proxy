@@ -261,12 +261,14 @@ func (m *QueueManager) DiscordRequestHandler(resp http.ResponseWriter, req *http
 func (m *QueueManager) GetRequestRoutingInfo(req *http.Request, token string) (routingHash uint64, path string, queueType QueueType) {
 	path = GetOptimisticBucketPath(req.URL.Path, req.Method)
 	queueType = NoAuth
-	if strings.HasPrefix(token, "Bearer") {
+	routingHash = HashCRC64(path)
+
+	switch {
+	case HasAuthPrefix(token, "Bearer"):
 		queueType = Bearer
 		routingHash = HashCRC64(token)
-	} else {
+	case token != "" && !HasAuthPrefix(token, "Basic"):
 		queueType = Bot
-		routingHash = HashCRC64(path)
 	}
 	return
 }
