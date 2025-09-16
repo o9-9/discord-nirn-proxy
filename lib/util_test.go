@@ -43,6 +43,8 @@ func TestHasAuthPrefix(t *testing.T) {
 	}{
 		{name: "basic with space", token: "Basic Zm9vOmJhcg==", scheme: "Basic", expected: true},
 		{name: "basic lowercase", token: "basic Zm9vOmJhcg==", scheme: "Basic", expected: true},
+		{name: "basic with tab", token: "Basic\tZm9vOmJhcg==", scheme: "Basic", expected: true},
+		{name: "basic only scheme", token: "Basic ", scheme: "Basic", expected: true},
 		{name: "missing space", token: "BasicZm9v", scheme: "Basic", expected: false},
 		{name: "different scheme", token: "Bot foo", scheme: "Basic", expected: false},
 		{name: "bearer", token: "Bearer token", scheme: "Bearer", expected: true},
