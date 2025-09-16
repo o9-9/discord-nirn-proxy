@@ -11,7 +11,9 @@ const knownData = "test data"
 const knownHash = 10232006911339297906
 
 func TestHashWorks(t *testing.T) {
-	HashCRC64(knownData)
+	if HashCRC64(knownData) != knownHash {
+		t.Fatalf("Invalid hash returned")
+	}
 }
 
 // Test for correctness
