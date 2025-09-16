@@ -276,10 +276,8 @@ func return401(item *QueueItem) {
 	item.doneChan <- nil
 }
 
-func isUnknownWebhook(body []byte) bool {
-	if len(body) == 0 {
-		return false
-	}
+func isUnknownWebhook(_body io.ReadCloser) bool {
+	body, _ := ioutil.ReadAll(_body);
 	return bytes.Contains(body, []byte("\"code\": 10015"))
 }
 
@@ -340,6 +338,7 @@ func (q *RequestQueue) subscribe(ch *QueueChannel, path string, pathHash uint64)
 			item.errChan <- err
 			continue
 		}
+		item.doneChan <- resp
 
 		if resp.StatusCode == 429 && scope != "shared" {
 			logger.WithFields(logrus.Fields{
@@ -358,19 +357,7 @@ func (q *RequestQueue) subscribe(ch *QueueChannel, path string, pathHash uint64)
 			}).Warn("Unexpected 429")
 		}
 
-		var bodyBytes []byte
-		var bodyReadErr error
-		shouldCheckWebhook := resp.StatusCode == 404 && !isInteraction(item.Req.URL.String())
-		if shouldCheckWebhook && resp.Body != nil {
-			bodyBytes, bodyReadErr = ioutil.ReadAll(resp.Body)
-			_ = resp.Body.Close()
-			resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-			if bodyReadErr != nil {
-				logger.WithError(bodyReadErr).Debug("Failed to read body for webhook detection")
-			}
-		}
-
-		if shouldCheckWebhook && bodyReadErr == nil && isUnknownWebhook(bodyBytes) {
+		if resp.StatusCode == 404 && isUnknownWebhook(resp.Body) && !isInteraction(item.Req.URL.String()) {
 			logger.WithFields(logrus.Fields{
 				"bucket": path,
 				"route":  item.Req.URL.String(),
@@ -378,8 +365,6 @@ func (q *RequestQueue) subscribe(ch *QueueChannel, path string, pathHash uint64)
 			}).Info("Setting fail fast 404 for webhook")
 			ret404 = true
 		}
-
-		item.doneChan <- resp
 
 		if resp.StatusCode == 401 && !isInteraction(item.Req.URL.String()) && q.queueType != NoAuth {
 			// Permanently lock this queue

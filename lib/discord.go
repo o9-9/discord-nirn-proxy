@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -219,21 +218,16 @@ func doDiscordReq(ctx context.Context, path string, method string, body io.ReadC
 	route := GetMetricsPath(path)
 	if route == "/channels/!/messages/!/reactions/!/!" {
 		segs := strings.Split(path, "/")
-		emojiIdx := -1
-		for idx, seg := range segs {
-			if seg == "reactions" {
-				emojiIdx = idx + 1
-				break
-			}
+		emojiIdx := 7
+		if strings.HasPrefix(path, "/") {
+			emojiIdx = 8
 		}
-		if emojiIdx >= 0 && emojiIdx < len(segs) {
-			emojiSegment := segs[emojiIdx]
-			if emojiSegment != "" {
-				if unescaped, err := url.PathUnescape(emojiSegment); err == nil && emojiSegment == unescaped {
-					segs[emojiIdx] = url.PathEscape(emojiSegment)
-					path = strings.Join(segs, "/")
-				}
+		if emojiIdx < len(segs) {
+			unescaped, _ := url.PathUnescape(segs[emojiIdx])
+			if segs[emojiIdx] == unescaped {
+				segs[emojiIdx] = url.PathEscape(segs[emojiIdx])
 			}
+			path = strings.Join(segs, "/")
 		}
 	}
 	discordReq, err := http.NewRequestWithContext(ctx, method, "https://discord.com"+path+"?"+query, body)
@@ -293,26 +287,10 @@ func ProcessRequest(ctx context.Context, item *QueueItem) (*http.Response, error
 		"discordBucket": discordResp.Header.Get("x-ratelimit-bucket"),
 	}).Debug("Discord request")
 
-	var respBody []byte
-	if discordResp.Body != nil {
-		respBody, err = ioutil.ReadAll(discordResp.Body)
-		if err != nil {
-			res.WriteHeader(500)
-			_, _ = res.Write([]byte(err.Error()))
-			return nil, err
-		}
-		_ = discordResp.Body.Close()
-		discordResp.Body = io.NopCloser(bytes.NewReader(respBody))
-	}
-
 	err = CopyResponseToResponseWriter(discordResp, item.Res)
 
 	if err != nil {
 		return nil, err
-	}
-
-	if discordResp.Body != nil {
-		discordResp.Body = io.NopCloser(bytes.NewReader(respBody))
 	}
 
 	return discordResp, nil
